@@ -34,6 +34,11 @@ a.lnk:first-of-type{border-top:0}
 a.lnk small{display:block;font-weight:400;color:var(--muted)}
 .foot{font-size:13px;color:var(--muted)}
 .err{font-size:15px}
+.ask{display:flex;flex-direction:column;gap:8px}.ask label{font-weight:600;font-size:15px}
+.ask input{font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--fg);min-height:44px}
+.ask button{font:inherit;font-weight:600;min-height:44px;border:0;border-radius:10px;background:var(--accent);color:#fff;cursor:pointer}
+@media (prefers-color-scheme:dark){.ask button{color:#0b1120}}
+.lnkbtn{font:inherit;background:none;border:0;padding:0;color:var(--accent);text-decoration:underline;cursor:pointer}
 </style>
 </head>
 <body>
@@ -52,26 +57,46 @@ a.lnk small{display:block;font-weight:400;color:var(--muted)}
   function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
   function addYears(d, n) { var x = new Date(d); x.setFullYear(x.getFullYear() + n); return x; }
   var code = decodeURIComponent((location.hash || '').slice(1)).trim();
-  var m = /^((TX|MX|MP|540|550)-(\d{2,3}))\.(\d{2})(\d{2})(\d{2})([DG])$/.exec(code);
+  // Deux formats : carte remplie par l'établissement (référence + date + côté) ou QR générique de la boîte (référence seule)
+  var m = /^((TX|MX|MP|540|550)-(\d{2,3}))(?:\.(\d{2})(\d{2})(\d{2})([DG]))?$/.exec(code);
   if (!m) {
     el('<div class="card err"><h2>QR code non reconnu</h2><p>Les informations de votre implant figurent sur votre carte d\'implant. Pour toute question, contactez votre chirurgien.</p></div>');
   } else {
-    var line = m[2], vol = +m[3], pose = new Date(2000 + +m[4], +m[5] - 1, +m[6], 12), side = m[7] === 'D' ? 'droit' : 'gauche';
-    var name = /^\d/.test(line) ? m[1] : line + ' ' + vol;
+    var line = m[2], vol = +m[3], dated = !!m[4];
+    var name = /^\d/.test(line) ? m[1] : line + ' ' + vol, KEY = 'pp-date-' + m[1];
+    var pose = dated ? new Date(2000 + +m[4], +m[5] - 1, +m[6], 12) : null;
+    if (!dated) { try { var sv = localStorage.getItem(KEY); if (sv && /^\d{4}-\d{2}-\d{2}$/.test(sv)) pose = new Date(sv + 'T12:00'); } catch (e) {} }
     el('<section class="card"><h2>Votre implant</h2><div class="kv">' +
       '<span>Référence</span><b>' + esc(name) + '</b>' +
       '<span>Type</span><b>Implant rond micro-texturé, gel de silicone · ' + LINES[line].toLowerCase() + '</b>' +
       '<span>Volume</span><b>' + vol + ' cc</b>' +
-      '<span>Côté</span><b>Sein ' + side + '</b>' +
-      '<span>Posé le</span><b>' + fr(pose) + '</b></div>' +
+      (dated ? '<span>Côté</span><b>Sein ' + (m[7] === 'D' ? 'droit' : 'gauche') + '</b><span>Posé le</span><b>' + fr(pose) + '</b>' : '') + '</div>' +
       '<p class="foot">Lot, numéro de série et établissement figurent sur votre carte d\'implant. Gardez-la avec vous et présentez-la lors de toute consultation, mammographie, échographie ou IRM.</p></section>');
-    var now = new Date(), steps = [['Contrôle à 1 mois', addDays(pose, 30)], ['Contrôle à 6 mois', addDays(pose, 182)]];
-    for (var y = 1; y <= 10; y++) steps.push(['Contrôle à ' + y + ' an' + (y > 1 ? 's' : ''), addYears(pose, y)]);
-    var nextIdx = -1; for (var i = 0; i < steps.length; i++) if (steps[i][1] >= now) { nextIdx = i; break; }
-    var shown = steps.filter(function (s, k) { return k >= Math.max(0, nextIdx - 1) && k < Math.max(0, nextIdx - 1) + 5; });
-    el('<section class="card"><h2>Votre suivi</h2><p style="margin:0 0 8px">Une consultation de contrôle est recommandée à 1 mois, à 6 mois, puis chaque année, même si tout va bien. Dates indicatives calculées depuis la pose :</p><ol class="cal">' +
-      shown.map(function (s) { var k = steps.indexOf(s); return '<li class="' + (k < nextIdx || nextIdx < 0 ? 'past' : k === nextIdx ? 'next' : '') + '"><span>' + s[0] + (k === nextIdx ? ' · prochain' : '') + '</span><em>' + fr(s[1]) + '</em></li>'; }).join('') +
-      '</ol><p class="foot">Votre chirurgien peut proposer un autre calendrier : c\'est le sien qui compte.</p></section>');
+    el('<section class="card" id="suivi"></section>');
+    var box = document.getElementById('suivi');
+    var iso = function (d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+    var drawSuivi = function () {
+      var intro = '<h2>Votre suivi</h2><p style="margin:0 0 8px">Une consultation de contrôle est recommandée à 1 mois, à 6 mois, puis chaque année, même si tout va bien.</p>';
+      var ask = '<div class="ask"><label for="pp-date">Date de votre intervention</label><input id="pp-date" type="date" max="' + iso(new Date()) + '" value="' + (pose && !dated ? iso(pose) : '') + '"><button type="button" id="pp-ok">Afficher mon calendrier</button></div>' +
+        '<p class="foot">Cette date reste uniquement sur ce téléphone : elle n\'est ni envoyée ni enregistrée ailleurs.</p>';
+      if (!pose) { box.innerHTML = intro + ask; return bind(); }
+      var now = new Date(), steps = [['Contrôle à 1 mois', addDays(pose, 30)], ['Contrôle à 6 mois', addDays(pose, 182)]];
+      for (var y = 1; y <= 10; y++) steps.push(['Contrôle à ' + y + ' an' + (y > 1 ? 's' : ''), addYears(pose, y)]);
+      var nextIdx = -1; for (var i = 0; i < steps.length; i++) if (steps[i][1] >= now) { nextIdx = i; break; }
+      var shown = steps.filter(function (s, k) { return k >= Math.max(0, nextIdx - 1) && k < Math.max(0, nextIdx - 1) + 5; });
+      box.innerHTML = intro + '<p style="margin:0 0 8px">Dates indicatives calculées depuis l\'intervention du ' + fr(pose) + ' :</p><ol class="cal">' +
+        shown.map(function (s) { var k = steps.indexOf(s); return '<li class="' + (k < nextIdx || nextIdx < 0 ? 'past' : k === nextIdx ? 'next' : '') + '"><span>' + s[0] + (k === nextIdx ? ' · prochain' : '') + '</span><em>' + fr(s[1]) + '</em></li>'; }).join('') +
+        '</ol><p class="foot">Votre chirurgien peut proposer un autre calendrier : c\'est le sien qui compte.</p>' +
+        (dated ? '' : '<p class="foot"><button type="button" class="lnkbtn" id="pp-edit">Modifier la date</button> · <button type="button" class="lnkbtn" id="pp-del">Effacer la date de ce téléphone</button></p>');
+      bind();
+    };
+    var bind = function () {
+      var ok = document.getElementById('pp-ok'), ed = document.getElementById('pp-edit'), dl = document.getElementById('pp-del');
+      if (ok) ok.onclick = function () { var v = document.getElementById('pp-date').value; if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return; pose = new Date(v + 'T12:00'); try { localStorage.setItem(KEY, v); } catch (e) {} drawSuivi(); };
+      if (ed) ed.onclick = function () { var keep = pose; pose = null; drawSuivi(); document.getElementById('pp-date').value = iso(keep); };
+      if (dl) dl.onclick = function () { pose = null; try { localStorage.removeItem(KEY); } catch (e) {} drawSuivi(); };
+    };
+    drawSuivi();
     el('<section class="urg"><h2>Consultez sans attendre si</h2><ul>' +
       '<li>un sein augmente de volume, gonfle ou change de forme, surtout plus d\'un an après l\'intervention</li>' +
       '<li>un sein devient dur, douloureux ou déformé</li>' +
@@ -88,7 +113,7 @@ a.lnk small{display:block;font-weight:400;color:var(--muted)}
     '<a class="lnk" href="https://ansm.sante.fr/dossiers-thematiques/surveillance-de-marche-des-implants-mammaires" target="_blank" rel="noopener">Implants mammaires : informations de l\'ANSM<small>Agence nationale de sécurité du médicament et des produits de santé</small></a>' +
     '<a class="lnk" href="https://signalement.social-sante.gouv.fr" target="_blank" rel="noopener">Signaler un effet indésirable<small>Portail officiel de signalement des événements sanitaires</small></a>' +
     '<p class="foot" style="margin:8px 0 0">Votre chirurgien : ses coordonnées figurent sur votre compte rendu opératoire. Fabricant : Symatese, coordonnées à compléter.</p></section>');
-  el('<p class="foot">Cette page ne contient aucune donnée personnelle : le QR code indique seulement la référence, le côté et la date de pose. Rien n\'est enregistré ni transmis. Prototype de démonstration, contenu non validé.</p>');
+  el('<p class="foot">Cette page ne contient aucune donnée personnelle : le QR code indique seulement la référence de l\'implant (et, sur la carte remplie par l\'établissement, le côté et la date de pose). Rien n\'est transmis ; une date saisie reste sur ce téléphone. Prototype de démonstration, contenu non validé.</p>');
 })();
 </script>
 </body>
