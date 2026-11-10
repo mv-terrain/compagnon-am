@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#091d42">
+<title>Mon implant mammaire</title>
+<style>
+:root{--bg:#f4f6f9;--surface:#fff;--line:#d6dce6;--fg:#0f1b33;--muted:#4f5b70;--accent:#004289;--deep:#091d42;--soft:#e7eef8;--warn-bg:#fff4dc;--warn:#7a4b00;--urgent-bg:#fde8e6;--urgent:#9b1c12}
+@media (prefers-color-scheme:dark){:root{--bg:#0b1120;--surface:#131b2e;--line:#2a3550;--fg:#e9eef7;--muted:#a3afc4;--accent:#84a0d3;--deep:#0b1120;--soft:#1a2540;--warn-bg:#3a2c0b;--warn:#f2c76b;--urgent-bg:#3d1714;--urgent:#ffb3ab}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.5 "Avenir Next","Segoe UI",-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;-webkit-text-size-adjust:100%}
+header{background:var(--deep);color:#fff;padding:calc(14px + env(safe-area-inset-top,0px)) 16px 14px}
+header b{display:block;font-size:13px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+header h1{margin:2px 0 0;font-size:22px;font-weight:600}
+main{max-width:640px;margin:0 auto;padding:14px 16px 40px;display:flex;flex-direction:column;gap:12px}
+.proto{background:var(--warn-bg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+h2{margin:0 0 8px;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.kv{display:grid;grid-template-columns:minmax(110px,38%) 1fr;gap:4px 12px;font-size:15px}
+.kv span{color:var(--muted)}.kv b{font-weight:600}
+ol.cal{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+ol.cal li{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;background:var(--soft);font-size:15px}
+ol.cal li.past{opacity:.6}ol.cal li.next{outline:2px solid var(--accent);font-weight:600}
+ol.cal li em{font-style:normal;color:var(--muted);white-space:nowrap}
+ul{margin:0;padding-left:20px}li{margin:3px 0}
+.urg{background:var(--urgent-bg);color:var(--urgent);border-radius:14px;padding:14px 16px}
+.urg h2{color:var(--urgent)}
+a{color:var(--accent)}
+a.lnk{display:block;padding:10px 0;border-top:1px solid var(--line);text-decoration:none;font-weight:600}
+a.lnk:first-of-type{border-top:0}
+a.lnk small{display:block;font-weight:400;color:var(--muted)}
+.foot{font-size:13px;color:var(--muted)}
+.err{font-size:15px}
+</style>
+</head>
+<body>
+<header><b>Prototype</b><h1>Mon implant mammaire</h1></header>
+<main id="app">
+  <div class="proto"><strong>Prototype — contenu non validé.</strong> Cette page est une maquette. Elle ne remplace pas les informations remises par votre chirurgien.</div>
+  <noscript><div class="card">Cette page a besoin de JavaScript pour lire les informations du QR code.</div></noscript>
+</main>
+<script>
+(function () {
+  var LINES = { TX: 'Profil bas', MX: 'Profil modéré', MP: 'Profil modéré plus', '540': 'Profil haut', '550': 'Profil ultra-haut' };
+  var app = document.getElementById('app');
+  function el(html) { var d = document.createElement('div'); d.innerHTML = html; while (d.firstChild) app.appendChild(d.firstChild); }
+  function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function fr(d) { return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }); }
+  function addDays(d, n) { var x = new Date(d); x.setDate(x.getDate() + n); return x; }
+  function addYears(d, n) { var x = new Date(d); x.setFullYear(x.getFullYear() + n); return x; }
+  var code = decodeURIComponent((location.hash || '').slice(1)).trim();
+  var m = /^((TX|MX|MP|540|550)-(\d{2,3}))\.(\d{2})(\d{2})(\d{2})([DG])$/.exec(code);
+  if (!m) {
+    el('<div class="card err"><h2>QR code non reconnu</h2><p>Les informations de votre implant figurent sur votre carte d\'implant. Pour toute question, contactez votre chirurgien.</p></div>');
+  } else {
+    var line = m[2], vol = +m[3], pose = new Date(2000 + +m[4], +m[5] - 1, +m[6], 12), side = m[7] === 'D' ? 'droit' : 'gauche';
+    var name = /^\d/.test(line) ? m[1] : line + ' ' + vol;
+    el('<section class="card"><h2>Votre implant</h2><div class="kv">' +
+      '<span>Référence</span><b>' + esc(name) + '</b>' +
+      '<span>Type</span><b>Implant rond micro-texturé, gel de silicone · ' + LINES[line].toLowerCase() + '</b>' +
+      '<span>Volume</span><b>' + vol + ' cc</b>' +
+      '<span>Côté</span><b>Sein ' + side + '</b>' +
+      '<span>Posé le</span><b>' + fr(pose) + '</b></div>' +
+      '<p class="foot">Lot, numéro de série et établissement figurent sur votre carte d\'implant. Gardez-la avec vous et présentez-la lors de toute consultation, mammographie, échographie ou IRM.</p></section>');
+    var now = new Date(), steps = [['Contrôle à 1 mois', addDays(pose, 30)], ['Contrôle à 6 mois', addDays(pose, 182)]];
+    for (var y = 1; y <= 10; y++) steps.push(['Contrôle à ' + y + ' an' + (y > 1 ? 's' : ''), addYears(pose, y)]);
+    var nextIdx = -1; for (var i = 0; i < steps.length; i++) if (steps[i][1] >= now) { nextIdx = i; break; }
+    var shown = steps.filter(function (s, k) { return k >= Math.max(0, nextIdx - 1) && k < Math.max(0, nextIdx - 1) + 5; });
+    el('<section class="card"><h2>Votre suivi</h2><p style="margin:0 0 8px">Une consultation de contrôle est recommandée à 1 mois, à 6 mois, puis chaque année, même si tout va bien. Dates indicatives calculées depuis la pose :</p><ol class="cal">' +
+      shown.map(function (s) { var k = steps.indexOf(s); return '<li class="' + (k < nextIdx || nextIdx < 0 ? 'past' : k === nextIdx ? 'next' : '') + '"><span>' + s[0] + (k === nextIdx ? ' · prochain' : '') + '</span><em>' + fr(s[1]) + '</em></li>'; }).join('') +
+      '</ol><p class="foot">Votre chirurgien peut proposer un autre calendrier : c\'est le sien qui compte.</p></section>');
+    el('<section class="urg"><h2>Consultez sans attendre si</h2><ul>' +
+      '<li>un sein augmente de volume, gonfle ou change de forme, surtout plus d\'un an après l\'intervention</li>' +
+      '<li>un sein devient dur, douloureux ou déformé</li>' +
+      '<li>une rougeur, une chaleur ou de la fièvre apparaissent</li>' +
+      '<li>vous sentez une boule dans le sein ou sous l\'aisselle</li>' +
+      '<li>la peau change d\'aspect, ou l\'implant devient visible ou palpable de façon inhabituelle</li>' +
+      '</ul><p style="margin:8px 0 0">En cas d\'urgence, appelez le 15.</p></section>');
+    el('<section class="card"><h2>Bon à savoir</h2><ul>' +
+      '<li>Un implant mammaire n\'est pas définitif : il peut devoir être changé au cours de la vie.</li>' +
+      '<li>Le lymphome anaplasique à grandes cellules associé aux implants (LAGC-AIM) est rare. Il se manifeste le plus souvent par un gonflement tardif du sein. Il se soigne bien lorsqu\'il est pris en charge tôt.</li>' +
+      '<li>Signalez à chaque professionnel de santé que vous portez des implants, en particulier avant une mammographie.</li></ul></section>');
+  }
+  el('<section class="card"><h2>Contacts et informations</h2>' +
+    '<a class="lnk" href="https://ansm.sante.fr/dossiers-thematiques/surveillance-de-marche-des-implants-mammaires" target="_blank" rel="noopener">Implants mammaires : informations de l\'ANSM<small>Agence nationale de sécurité du médicament et des produits de santé</small></a>' +
+    '<a class="lnk" href="https://signalement.social-sante.gouv.fr" target="_blank" rel="noopener">Signaler un effet indésirable<small>Portail officiel de signalement des événements sanitaires</small></a>' +
+    '<p class="foot" style="margin:8px 0 0">Votre chirurgien : ses coordonnées figurent sur votre compte rendu opératoire. Fabricant : Symatese, coordonnées à compléter.</p></section>');
+  el('<p class="foot">Cette page ne contient aucune donnée personnelle : le QR code indique seulement la référence, le côté et la date de pose. Rien n\'est enregistré ni transmis. Prototype de démonstration, contenu non validé.</p>');
+})();
+</script>
+</body>
+</html>
