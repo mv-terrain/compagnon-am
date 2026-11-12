@@ -1,4 +1,4 @@
-const CACHE = "compagnon-am-v43";
+const CACHE = "compagnon-am-v44";
 const FILES = ["./", "./index.html", "./manifest.webmanifest", "./icon-180.png", "./icon-192.png", "./icon-512.png"];
 const LIBS = ["https://cdn.jsdelivr.net/npm/@zxing/library@0.20.0/umd/index.min.js", "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.4/umd/zxing-browser.min.js"];   // lecteur photo (iPhone) disponible hors ligne
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES).then(() => Promise.all(LIBS.map(u => c.add(new Request(u, { mode: "cors" })).catch(() => {})))) ).then(() => self.skipWaiting())); });
